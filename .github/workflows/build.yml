@@ -16,11 +16,22 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: 8.11.1
-      - name: Build
+      - name: Sign release with debug key
+        run: |
+          cat > "$RUNNER_TEMP/sign.gradle" <<'EOF'
+          allprojects {
+            afterEvaluate { p ->
+              if (p.plugins.hasPlugin('com.android.application')) {
+                p.android.buildTypes.release.signingConfig = p.android.signingConfigs.debug
+              }
+            }
+          }
+          EOF
+      - name: Build release
         working-directory: project
-        run: gradle assembleDebug
+        run: gradle assembleRelease --init-script "$RUNNER_TEMP/sign.gradle" --console=plain
       - uses: actions/upload-artifact@v4
         with:
-          name: Device-Monitor-debug-apk
-          path: project/app/build/outputs/apk/debug/*.apk
+          name: Device-Monitor-release-apk
+          path: project/app/build/outputs/apk/release/*.apk
           if-no-files-found: error
